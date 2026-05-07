@@ -99,7 +99,7 @@ public class DemoApplication extends StreamPlayer implements StreamPlayerListene
 	public void statusUpdated(final StreamPlayerEvent streamPlayerEvent) {
 
 		// Player status
-		final Status status = streamPlayerEvent.getPlayerStatus();
+		final Status status = streamPlayerEvent.playerStatus();
 
 		// Do different things depending on the status.
 		// See XR3PLAYER https://github.com/goxr3plus/XR3Player for advanced examples

@@ -27,31 +27,31 @@ class StreamPlayerEventTest {
 
     @Test
     void itReturnsTheStatus() {
-        assertEquals(status, event.getPlayerStatus());
+        assertEquals(status, event.playerStatus());
     }
 
     @Test
     void itReturnsTheEncodedStreamPosition() {
-        assertEquals(encodededStreamPosition, event.getEncodedStreamPosition());
+        assertEquals(encodededStreamPosition, event.encodedStreamPosition());
     }
 
     @Test
     void itReturnsTheSource() {
-        assertSame(source, event.getSource());
+        assertSame(source, event.source());
     }
 
     @Test
     void itReturnsTheDescription() {
-        assertSame(description, event.getDescription());
+        assertSame(description, event.description());
     }
 
     @Test
     void itReturnsAString() {
         final String actual = event.toString();
-        final String expected = "Source :="
-                + source.toString()
-                + " , Player Status := RESUMED , EncodedStreamPosition :=12345 , Description :="
-                + description.toString();
+        final String expected = "Source := " + source
+                + " , Player Status := RESUMED"
+                + " , EncodedStreamPosition := 12345"
+                + " , Description := " + description;
         assertEquals(expected, actual);
     }
 

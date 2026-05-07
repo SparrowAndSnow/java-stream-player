@@ -8,9 +8,9 @@ package com.goxr3plus.streamplayer.enums;
 public enum AudioType {
 
 	/**
-	 * Audio is URL
+	 * Audio is URI
 	 */
-	URL,
+	URI,
 	/**
 	 * Audio is File
 	 */

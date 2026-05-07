@@ -25,86 +25,19 @@ package com.goxr3plus.streamplayer.stream;
 import com.goxr3plus.streamplayer.enums.Status;
 
 /**
- * The Class StreamPlayerEvent.
+ * An event representing a state change in StreamPlayer.
  *
- * @author GOXR3PLUS (www.goxr3plus.co.nf)
+ * @param source               the StreamPlayer that generated the event
+ * @param playerStatus         the new status of the player
+ * @param encodedStreamPosition the position in the encoded stream
+ * @param description          optional description of the event
  */
-public class StreamPlayerEvent {
-
-    /** The status. */
-    private Status playerStatus = Status.NOT_SPECIFIED;
-
-    /** The stream position. */
-    private int encodedStreamPosition = -1;
-
-    /** The source. */
-    private StreamPlayer source = null;
-
-    /** The description. */
-    private Object description = null;
-
-    /**
-     * Constructor.
-     *
-     * @param source
-     *            the source
-     * @param status
-     *            the status
-     * @param encodededStreamPosition
-     *            the stream position
-     * @param description
-     *            the description
-     */
-    public StreamPlayerEvent(StreamPlayer source, Status status, int encodededStreamPosition, Object description) {
-	this.source = source;
-	this.playerStatus = status;
-	this.encodedStreamPosition = encodededStreamPosition;
-	this.description = description;
-    }
-
-    /**
-     * Returns the Player Status
-     *
-     * @return The player Status (paused,playing,...)
-     * @see Status
-     */
-    public Status getPlayerStatus() {
-	return playerStatus;
-    }
-
-    /**
-     * Returns the encoded stream position
-     *
-     * @return EncodedStreamPosition = the position of the encoded audio stream
-     *         right now..
-     */
-    public int getEncodedStreamPosition() {
-	return encodedStreamPosition;
-    }
-
-    /**
-     * Gets the description.
-     *
-     * @return the description
-     */
-    public Object getDescription() {
-	return description;
-    }
-
-    /**
-     * Gets the source.
-     *
-     * @return the source 
-     */
-    public Object getSource() {
-	return source;
-    }
+public record StreamPlayerEvent(StreamPlayer source, Status playerStatus, int encodedStreamPosition, Object description) {
 
     @Override
     public String toString() {
-	return "Source :=" + source + " , Player Status := " + playerStatus + " , EncodedStreamPosition :="
-		+ encodedStreamPosition + " , Description :=" + description;
-
+        return "Source := " + source + " , Player Status := " + playerStatus
+                + " , EncodedStreamPosition := " + encodedStreamPosition
+                + " , Description := " + description;
     }
-
 }

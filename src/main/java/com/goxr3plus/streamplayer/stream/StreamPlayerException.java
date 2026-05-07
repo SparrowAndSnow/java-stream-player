@@ -1,134 +1,45 @@
-/*
- *  This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-   Also(warning!):
- 
-  1)You are not allowed to sell this product to third party.
-  2)You can't change license and made it like you are the owner,author etc.
-  3)All redistributions of source code files must contain all copyright
-     notices that are currently in this file, and this list of conditions without
-     modification.
- */
-
 package com.goxr3plus.streamplayer.stream;
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-
 /**
- * Special exceptions of StreamPlayer.
- *
- * @author GOXR3PLUS (www.goxr3plus.co.nf)
- * @author http://www.javazoom.net
+ * Exception thrown by StreamPlayer for player-specific errors.
  */
-@SuppressWarnings("serial")
 public class StreamPlayerException extends Exception {
 
-	/**
-	 * Type of exception.
-	 *
-	 * @author GOXR3PLUS
-	 */
-	public enum PlayerException {
+    public enum PlayerException {
+        GAIN_CONTROL_NOT_SUPPORTED,
+        PAN_CONTROL_NOT_SUPPORTED,
+        MUTE_CONTROL_NOT_SUPPORTED,
+        BALANCE_CONTROL_NOT_SUPPORTED,
+        WAIT_ERROR,
+        CAN_NOT_INIT_LINE,
+        LINE_NOT_SUPPORTED,
+        SKIP_NOT_SUPPORTED,
+    }
 
-		/** The gain control not supported. */
-		GAIN_CONTROL_NOT_SUPPORTED,
-		/** The pan control not supported. */
-		PAN_CONTROL_NOT_SUPPORTED,
-		/** The mute control not supported. */
-		MUTE_CONTROL_NOT_SUPPORTED,
-		/** The balance control not supported. */
-		BALANCE_CONTROL_NOT_SUPPORTED,
-		/** The wait error. */
-		WAIT_ERROR,
-		/** The can not init line. */
-		CAN_NOT_INIT_LINE,
-		/**
-		 * LINE IS NOT SUPPORTED
-		 */
-		LINE_NOT_SUPPORTED,
-		/** The skip not supported. */
-		SKIP_NOT_SUPPORTED,
-	}
+    private final Throwable cause;
 
-	/** The cause. */
-	private final Throwable cause;
+    public StreamPlayerException(PlayerException error) {
+        super(error.toString());
+        this.cause = null;
+    }
 
-	/**
-	 * Constructor.
-	 *
-	 * @param paramString String Parameter
-	 */
-	public StreamPlayerException(PlayerException paramString) {
-		super(paramString.toString());
-		cause = null;
-	}
+    public StreamPlayerException(Throwable cause) {
+        this.cause = cause;
+    }
 
-	/**
-	 * Constructor.
-	 *
-	 * @param paramThrowable the param throwable
-	 */
-	public StreamPlayerException(Throwable paramThrowable) {
-		cause = paramThrowable;
-	}
+    public StreamPlayerException(PlayerException error, Throwable cause) {
+        super(error.toString());
+        this.cause = cause;
+    }
 
-	/**
-	 * Constructor.
-	 *
-	 * @param paramString the param string
-	 * @param paramThrowable the param throwable
-	 */
-	public StreamPlayerException(PlayerException paramString, Throwable paramThrowable) {
-		super(paramString.toString());
-		cause = paramThrowable;
-	}
+    @Override
+    public Throwable getCause() {
+        return cause;
+    }
 
-	@Override
-	public Throwable getCause() {
-		return cause;
-	}
-
-	@Override
-	public String getMessage() {
-
-		if (super.getMessage() != null)
-			return super.getMessage();
-		else if (cause != null)
-			return cause.toString();
-
-		return null;
-	}
-
-	@Override
-	public void printStackTrace() {
-		printStackTrace(System.err);
-	}
-
-	@Override
-	public void printStackTrace(PrintStream printStream) {
-		synchronized (printStream) {
-			PrintWriter localPrintWriter = new PrintWriter(printStream, false);
-			printStackTrace(localPrintWriter);
-			localPrintWriter.flush();
-		}
-	}
-
-	@Override
-	public void printStackTrace(PrintWriter printWriter) {
-		if (cause != null)
-			cause.printStackTrace(printWriter);
-
-	}
+    @Override
+    public String getMessage() {
+        var msg = super.getMessage();
+        return msg != null ? msg : (cause != null ? cause.toString() : null);
+    }
 }

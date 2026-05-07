@@ -5,7 +5,7 @@ import com.goxr3plus.streamplayer.enums.Status;
 import javax.sound.sampled.SourceDataLine;
 import java.io.File;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 
@@ -30,17 +30,6 @@ public interface StreamPlayerInterface {
     void removeStreamPlayerListener(StreamPlayerListener streamPlayerListener);
 
     /**
-     * Open the specified object which can be File,URL or InputStream.
-     *
-     * @param object the object [File or URL or InputStream ]
-     *
-     * @throws StreamPlayerException the stream player exception
-     * @deprecated Use one of {@link #open(File)}, {@link #open(URL)} or {@link #open(InputStream)} instead.
-     */
-    @Deprecated
-    void open(Object object) throws StreamPlayerException;
-
-    /**
      * Open the specified file for playback.
      *
      * @param file the file to be played
@@ -52,11 +41,11 @@ public interface StreamPlayerInterface {
     /**
      * Open the specified location for playback.
      *
-     * @param url the location to be played
+     * @param uri the location to be played
      *
      * @throws StreamPlayerException the stream player exception
      */
-    void open(URL url) throws StreamPlayerException;
+    void open(URI uri) throws StreamPlayerException;
 
     /**
      * Open the specified stream for playback.

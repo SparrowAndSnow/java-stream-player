@@ -11,7 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 
-public class FileDataSource implements DataSource {
+public final class FileDataSource implements DataSource {
 
     private final File source;
 
