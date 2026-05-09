@@ -50,4 +50,9 @@ public sealed interface DataSource permits FileDataSource, UriDataSource, Stream
      * @return true if the DataSource is backed by a File
      */
     boolean isFile();
+
+    /**
+     * @return total size of the data source in bytes, or -1 if unknown
+     */
+    default long getSize() { return -1; }
 }

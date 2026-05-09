@@ -102,8 +102,8 @@ public class StreamDemoApplication extends StreamPlayer implements StreamPlayerL
     public void statusUpdated(final StreamPlayerEvent streamPlayerEvent) {
 
         // Player status
-        final Status status = streamPlayerEvent.getPlayerStatus();
-        // System.out.println(streamPlayerEvent.getPlayerStatus());
+        final Status status = streamPlayerEvent.playerStatus();
+        // System.out.println(streamPlayerEvent.playerStatus());
 
         // Examples
 

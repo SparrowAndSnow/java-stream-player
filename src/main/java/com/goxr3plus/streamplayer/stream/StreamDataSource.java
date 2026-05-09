@@ -45,12 +45,12 @@ public final class StreamDataSource implements DataSource {
             AudioFileFormat format = getAudioFileFormat();
             AudioFormat audioFormat = format.getFormat();
             
-            Long microseconds = (Long) format.properties().get("duration");
-            if (microseconds != null && microseconds > 0) {
-                cachedDurationMillis = microseconds / 1000L;
+            Object durationObj = format.properties().get("duration");
+            if (durationObj instanceof Number durationNum && durationNum.longValue() > 0) {
+                cachedDurationMillis = durationNum.longValue() / 1000L;
                 return cachedDurationMillis;
             }
-            
+
             float frameRate = audioFormat.getFrameRate();
             long frameLength = format.getFrameLength();
             

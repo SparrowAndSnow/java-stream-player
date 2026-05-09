@@ -75,7 +75,7 @@ class AnotherStreamPlayerListener implements StreamPlayerListener {
     @Override
     public void statusUpdated(StreamPlayerEvent event) {
         // Player status
-        final Status status = event.getPlayerStatus();
+        final Status status = event.playerStatus();
 
         // Do different things depending on the status.
         // See XR3PLAYER https://github.com/goxr3plus/XR3Player for advanced examples

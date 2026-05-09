@@ -32,7 +32,7 @@ import com.goxr3plus.streamplayer.enums.Status;
  * @param encodedStreamPosition the position in the encoded stream
  * @param description          optional description of the event
  */
-public record StreamPlayerEvent(StreamPlayer source, Status playerStatus, int encodedStreamPosition, Object description) {
+public record StreamPlayerEvent(StreamPlayerInterface source, Status playerStatus, int encodedStreamPosition, Object description) {
 
     @Override
     public String toString() {

@@ -6,7 +6,7 @@ import java.util.logging.Logger;
 /**
  * Manages the SourceDataLine (audio output) and its associated controls (gain, pan, mute, balance).
  */
-public class Outlet {
+public class Outlet implements AudioOutlet {
 
     private final Logger logger;
     private FloatControl balanceControl;
@@ -19,21 +19,32 @@ public class Outlet {
         this.logger = logger;
     }
 
+    @Override
     public FloatControl getBalanceControl() { return balanceControl; }
+    @Override
     public FloatControl getGainControl() { return gainControl; }
+    @Override
     public BooleanControl getMuteControl() { return muteControl; }
+    @Override
     public FloatControl getPanControl() { return panControl; }
+    @Override
     public SourceDataLine getSourceDataLine() { return sourceDataLine; }
 
+    @Override
     public void setBalanceControl(FloatControl balanceControl) { this.balanceControl = balanceControl; }
+    @Override
     public void setGainControl(FloatControl gainControl) { this.gainControl = gainControl; }
+    @Override
     public void setMuteControl(BooleanControl muteControl) { this.muteControl = muteControl; }
+    @Override
     public void setPanControl(FloatControl panControl) { this.panControl = panControl; }
+    @Override
     public void setSourceDataLine(SourceDataLine sourceDataLine) { this.sourceDataLine = sourceDataLine; }
 
     /**
      * Check if a control type is supported by the current SourceDataLine.
      */
+    @Override
     public boolean hasControl(final Control.Type control, final Control component) {
         return component != null && sourceDataLine != null && sourceDataLine.isControlSupported(control);
     }
@@ -41,6 +52,7 @@ public class Outlet {
     /**
      * Returns the current gain value (dB scale), or 0.0 if gain control is unavailable.
      */
+    @Override
     public float getGainValue() {
         return hasControl(FloatControl.Type.MASTER_GAIN, gainControl) ? gainControl.getValue() : 0.0F;
     }
@@ -48,7 +60,8 @@ public class Outlet {
     /**
      * Drains, stops, closes and nullifies the SourceDataLine.
      */
-    void drainStopAndFreeDataLine() {
+    @Override
+    public void drainStopAndFreeDataLine() {
         if (sourceDataLine != null) {
             sourceDataLine.drain();
             sourceDataLine.stop();
@@ -60,7 +73,8 @@ public class Outlet {
     /**
      * Flushes, closes and nullifies the SourceDataLine.
      */
-    void flushAndFreeDataLine() {
+    @Override
+    public void flushAndFreeDataLine() {
         if (sourceDataLine != null) {
             sourceDataLine.flush();
             sourceDataLine.close();
@@ -71,7 +85,8 @@ public class Outlet {
     /**
      * Flushes and stops the SourceDataLine if it's running.
      */
-    void flushAndStop() {
+    @Override
+    public void flushAndStop() {
         if (sourceDataLine != null && sourceDataLine.isRunning()) {
             sourceDataLine.flush();
             sourceDataLine.stop();
@@ -81,14 +96,16 @@ public class Outlet {
     /**
      * @return true if the SourceDataLine exists and is not running
      */
-    boolean isStartable() {
+    @Override
+    public boolean isStartable() {
         return sourceDataLine != null && !sourceDataLine.isRunning();
     }
 
     /**
      * Starts the SourceDataLine.
      */
-    void start() {
+    @Override
+    public void start() {
         sourceDataLine.start();
     }
 
@@ -96,7 +113,8 @@ public class Outlet {
      * Opens the SourceDataLine with the given format and buffer size,
      * and initializes available controls (gain, pan, mute, balance).
      */
-    void open(AudioFormat format, int bufferSize) throws LineUnavailableException {
+    @Override
+    public void open(AudioFormat format, int bufferSize) throws LineUnavailableException {
         if (sourceDataLine == null) return;
 
         logger.info("Opening SourceDataLine...");

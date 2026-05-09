@@ -224,6 +224,22 @@ public interface StreamPlayerInterface {
      */
     int getPositionByte();
 
+	/**
+	 * Return the total size of the data source in bytes (if known).
+	 * For network streams, this is the HTTP Content-Length.
+	 *
+	 * @return total bytes of source, or -1 if unknown
+	 */
+	long getSourceSize();
+
+	/**
+	 * Returns buffered percentage of the source data.
+	 * Useful for showing preload progress on network streams.
+	 *
+	 * @return percentage 0-100, or -1 if total size is unknown
+	 */
+	int getBufferedPercentage();
+
     /**
      * Gets the source data line.
      *

@@ -44,11 +44,11 @@ public interface StreamPlayerListener {
 	 * running.
 	 *
 	 * @param nEncodedBytes the n encoded bytes
-	 * @param microsecondPosition the microsecond position
+	 * @param positionInMilliseconds the absolute position in milliseconds
 	 * @param pcmData the pcm data
 	 * @param properties the properties
 	 */
-	void progress(int nEncodedBytes , long microsecondPosition , byte[] pcmData , Map<String,Object> properties);
+	void progress(int nEncodedBytes , long positionInMilliseconds , byte[] pcmData , Map<String,Object> properties);
 	
 	/**
 	 * Is called every time the status of the StreamPlayer changes.

@@ -8,24 +8,37 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.time.Duration;
 
-public final class UriDataSource implements DataSource {
+public final class UriDataSource implements DataSource, SeekableDataSource {
 
     private final URI source;
     private Long cachedDurationMillis = null;
     private AudioFileFormat cachedAudioFileFormat = null;
 
+    /** Total file size in bytes, from HTTP Content-Length (-1 if unknown) */
+    private long contentLength = -1;
+
+    /** When set, the next getAudioInputStream() call will open with HTTP Range header */
+    private long pendingSeekPosition = -1;
+
     UriDataSource(URI source) {
         this.source = source;
     }
 
-    @Override
+    /** Set byte position for the next stream request (used for HTTP Range seeking). */
+    void setSeekPosition(long bytes) {
+        this.pendingSeekPosition = bytes;
+    }
+
+@Override
     public AudioFileFormat getAudioFileFormat() throws UnsupportedAudioFileException, IOException {
         if (cachedAudioFileFormat != null) {
             return cachedAudioFileFormat;
@@ -43,10 +56,30 @@ public final class UriDataSource implements DataSource {
     }
 
     @Override
+    public AudioInputStream openAtPosition(long bytePosition) throws IOException, UnsupportedAudioFileException {
+        URL url = source.toURL();
+        URLConnection conn = url.openConnection();
+        conn.setRequestProperty("Range", "bytes=" + bytePosition + "-");
+        conn.connect();
+        InputStream in = new BufferedInputStream(conn.getInputStream());
+        return AudioSystem.getAudioInputStream(in);
+    }
+
+    @Override
+    public long getContentLength() {
+        return contentLength;
+    }
+
+    @Override
     public AudioInputStream getAudioInputStream() throws UnsupportedAudioFileException, IOException {
         if (source.getScheme() != null && source.getScheme().startsWith("file")) {
             return AudioSystem.getAudioInputStream(new File(source));
         } else {
+            long seekPos = pendingSeekPosition;
+            pendingSeekPosition = -1;
+            if (seekPos > 0) {
+                return openAtPosition(seekPos);
+            }
             return AudioSystem.getAudioInputStream(source.toURL());
         }
     }
@@ -112,22 +145,36 @@ public final class UriDataSource implements DataSource {
             URLConnection connection = url.openConnection();
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
-            
+
             long contentLength = connection.getContentLengthLong();
-            
+            if (contentLength > 0) {
+                this.contentLength = contentLength;
+            }
+
             // Try to get AudioFileFormat (cached if already retrieved)
+            AudioFileFormat format = null;
+            AudioFormat audioFormat = null;
             try {
-                AudioFileFormat format = getAudioFileFormat();
-                AudioFormat audioFormat = format.getFormat();
-                
-                // 1) Try "duration" property from audio file metadata (most accurate)
-                // The value is in microseconds; safely handle any numeric type
+                format = getAudioFileFormat();
+                audioFormat = format.getFormat();
+
+                // 1) Try "duration" property from audio file metadata.
+                // JavaSound SPI specifies duration in microseconds; divide by 1000 for ms.
+                // If the value is < 1_000_000, it's likely already in milliseconds
+                // (some SPIs don't follow the microsecond convention), so use directly.
                 Object durationObj = format.properties().get("duration");
-                if (durationObj instanceof Number durationNum && durationNum.longValue() > 0) {
-                    cachedDurationMillis = durationNum.longValue() / 1000L;
-                    return cachedDurationMillis;
+                if (durationObj instanceof Number durationNum) {
+                    long rawValue = durationNum.longValue();
+                    if (rawValue > 0) {
+                        long durationMs = rawValue < 1_000_000L ? rawValue : rawValue / 1000L;
+                        // Sanity check: duration should be at least 1 second for any audio file
+                        if (durationMs >= 1000) {
+                            cachedDurationMillis = durationMs;
+                            return cachedDurationMillis;
+                        }
+                    }
                 }
-                
+
                 // 2) Try frame length / frame rate calculation
                 float frameRate = audioFormat.getFrameRate();
                 long frameLength = format.getFrameLength();
@@ -135,33 +182,60 @@ public final class UriDataSource implements DataSource {
                     cachedDurationMillis = (long) ((frameLength / frameRate) * 1000);
                     return cachedDurationMillis;
                 }
-                
-                // 3) Try content-length + bitrate from AudioFileFormat properties
+
+            } catch (Exception e) {
+                // AudioFileFormat unavailable, continue to fallbacks
+            }
+
+            // 3) Content-Length + bitrate from AudioFileFormat properties (if format available)
+            if (format != null && contentLength > 0) {
+                Long bitrate = extractBitrateFromProperties(format.properties());
+                if (bitrate != null && bitrate > 0) {
+                    cachedDurationMillis = (contentLength * 8L * 1000L) / bitrate;
+                    return cachedDurationMillis;
+                }
+            }
+
+            // 4) AudioInputStream-based format detection: opens the stream and uses
+            // its AudioFormat to determine actual bitrate. This works even when
+            // getAudioFileFormat() failed, because the stream headers still contain
+            // format info (frame size, frame rate) for bitrate calculation.
+            try (var ais = AudioSystem.getAudioInputStream(url)) {
+                AudioFormat streamFormat = ais.getFormat();
+
+                // 4a) Try frame length / frame rate calculation
+                long streamFrameLength = ais.getFrameLength();
+                if (streamFrameLength > 0 && streamFormat.getFrameRate() > 0) {
+                    cachedDurationMillis = (long) ((streamFrameLength / streamFormat.getFrameRate()) * 1000);
+                    if (cachedDurationMillis > 0)
+                        return cachedDurationMillis;
+                }
+
+                // 4b) Try content-length + bitrate from AudioFormat
                 if (contentLength > 0) {
-                    Long bitrate = extractBitrateFromProperties(format.properties());
+                    Long bitrate = extractBitrateFromProperties(streamFormat.properties());
+
+                    // Calculate from frame size * frame rate if not in properties.
+                    // Works for CBR formats (MP3, WAV) where frameSize is fixed per frame.
+                    if (bitrate == null) {
+                        float frameSize = streamFormat.getFrameSize();
+                        float frameRate = streamFormat.getFrameRate();
+                        if (frameSize > 0 && frameRate > 0) {
+                            bitrate = (long) (frameSize * frameRate * 8);
+                        }
+                    }
+
                     if (bitrate != null && bitrate > 0) {
                         cachedDurationMillis = (contentLength * 8L * 1000L) / bitrate;
-                        return cachedDurationMillis;
+                        if (cachedDurationMillis > 0)
+                            return cachedDurationMillis;
                     }
                 }
-                
-                // 4) Try AudioInputStream frame length (works for some URL connections)
-                try (var ais = AudioSystem.getAudioInputStream(url)) {
-                    long streamFrameLength = ais.getFrameLength();
-                    if (streamFrameLength > 0 && audioFormat.getFrameRate() > 0) {
-                        cachedDurationMillis = (long) ((streamFrameLength / audioFormat.getFrameRate()) * 1000);
-                        return cachedDurationMillis;
-                    }
-                } catch (Exception ignored) {
-                    // AudioInputStream from URL not available
-                }
-                
-            } catch (Exception e) {
-                // AudioFileFormat unavailable
+            } catch (Exception ignored) {
+                // AudioInputStream from URL not available
             }
-            
-            // 5) Last resort: URL-based format detection + content-length estimate
-            // Only use this when we have a content-length and can identify the format
+
+            // 5) Content-Length + URL-based format/bitrate detection
             if (contentLength > 0) {
                 Long urlBitrate = estimateBitrateFromUrl(url);
                 if (urlBitrate != null && urlBitrate > 0) {
@@ -169,11 +243,11 @@ public final class UriDataSource implements DataSource {
                     return cachedDurationMillis;
                 }
             }
-            
+
         } catch (Exception e) {
             System.err.println("Failed to get duration from network: " + e.getMessage());
         }
-        
+
         return -1;
     }
     
@@ -322,6 +396,15 @@ public final class UriDataSource implements DataSource {
     public Duration getDuration() {
         long millis = getDurationInMilliseconds();
         return millis == -1 ? null : Duration.ofMillis(millis);
+    }
+
+    @Override
+    public long getSize() {
+        if (source.getScheme() != null && source.getScheme().startsWith("file")) {
+            File f = new File(source);
+            return f.exists() ? f.length() : -1;
+        }
+        return contentLength;
     }
 
     @Override

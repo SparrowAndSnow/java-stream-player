@@ -150,10 +150,10 @@ public class SeekAndDurationTest implements StreamPlayerListener {
     }
     
     @Override
-    public void progress(int nEncodedBytes, long microsecondPosition, byte[] pcmData, Map<String, Object> properties) {
+    public void progress(int nEncodedBytes, long positionInMilliseconds, byte[] pcmData, Map<String, Object> properties) {
         // 每10秒打印一次进度
-        if (microsecondPosition % 10000000 < 100000) { // 每10秒
-            System.out.println("[进度] " + (microsecondPosition / 1000000) + " 秒, 字节: " + nEncodedBytes);
+        if (positionInMilliseconds % 10000 < 100) { // 每10秒
+            System.out.println("[进度] " + (positionInMilliseconds / 1000) + " 秒, 字节: " + nEncodedBytes);
         }
     }
     
