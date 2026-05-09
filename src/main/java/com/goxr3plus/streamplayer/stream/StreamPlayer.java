@@ -155,7 +155,7 @@ public class StreamPlayer implements StreamPlayerInterface, Callable<Void> {
         this.outlet = new Outlet(logger);
         this.lineManager = new LineManager(logger, outlet);
         this.seekService = new SeekService();
-        this.playbackEngine = new PlaybackEngine(logger, streamManager, outlet,
+        this.playbackEngine = new PlaybackEngine(this, logger, streamManager, outlet,
                 eventDispatcher, stateManager, seekService, audioLock);
         reset();
     }
@@ -596,6 +596,23 @@ public class StreamPlayer implements StreamPlayerInterface, Callable<Void> {
                                     PlayerException.SKIP_NOT_SUPPORTED);
                         totalSkipped += skipped;
                         logger.info("Skipped : " + totalSkipped + "/" + bytes);
+                    }
+
+                    // Re-create the PCM-converted AudioInputStream from the encoded stream
+                    // to reset decoder state. Some SPI implementations (e.g. MP3) produce
+                    // corrupted output after skip() on the PCM stream; a fresh wrapper
+                    // forces the decoder to re-sync at a frame boundary.
+                    if (totalSkipped > 0
+                            && streamManager.getEncodedAudioInputStream() != null
+                            && outlet.getSourceDataLine() != null) {
+                        try {
+                            var encoded = streamManager.getEncodedAudioInputStream();
+                            var format = outlet.getSourceDataLine().getFormat();
+                            var freshPcm = AudioSystem.getAudioInputStream(format, encoded);
+                            streamManager.setAudioInputStream(freshPcm);
+                        } catch (Exception e) {
+                            logger.warning(() -> "Failed to re-create PCM stream after seek: " + e.getMessage());
+                        }
                     }
                 }
             }

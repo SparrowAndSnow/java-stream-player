@@ -2,6 +2,7 @@ package com.goxr3plus.streamplayer.stream;
 
 import com.goxr3plus.streamplayer.enums.Status;
 import javazoom.spi.PropertiesContainer;
+import javax.sound.sampled.AudioSystem;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -18,6 +19,7 @@ public class PlaybackEngine implements Callable<Void> {
 
     private static final int EXTERNAL_BUFFER_SIZE = 4096;
 
+    private final StreamPlayer streamPlayer;
     private final Logger logger;
     private final AudioStreamManager streamManager;
     private final AudioOutlet outlet;
@@ -28,9 +30,10 @@ public class PlaybackEngine implements Callable<Void> {
     private final Object audioLock;
     private final Object pauseLock = new Object();
 
-    public PlaybackEngine(Logger logger, AudioStreamManager streamManager, AudioOutlet outlet,
+    public PlaybackEngine(StreamPlayer streamPlayer, Logger logger, AudioStreamManager streamManager, AudioOutlet outlet,
                           EventDispatcher eventDispatcher, StateManager stateManager, SeekService seekService,
                           Object audioLock) {
+        this.streamPlayer = streamPlayer;
         this.logger = logger;
         this.streamManager = streamManager;
         this.outlet = outlet;
@@ -118,7 +121,8 @@ public class PlaybackEngine implements Callable<Void> {
         streamManager.closeStream();
 
         if (nBytesRead == -1) {
-            // EOM handled by caller
+            eventDispatcher.fireStatus(streamPlayer, Status.EOM, AudioSystem.NOT_SPECIFIED, null);
+            stateManager.setStatus(Status.STOPPED);
         }
 
         logger.info("Decoding thread completed");
