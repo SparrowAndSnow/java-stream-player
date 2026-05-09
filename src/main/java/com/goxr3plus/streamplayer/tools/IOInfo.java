@@ -1,6 +1,7 @@
 package com.goxr3plus.streamplayer.tools;
 
-import org.apache.commons.io.FilenameUtils;
+
+import java.nio.file.Path;
 
 public class IOInfo {
 
@@ -13,7 +14,7 @@ public class IOInfo {
 	 * @return the File extension
 	 */
 	public static String getFileExtension(final String absolutePath) {
-		return FilenameUtils.getExtension(absolutePath).toLowerCase();
+		return getExtensionWithoutDot(Path.of(absolutePath)).toLowerCase();
 
 		// int i = path.lastIndexOf('.'); // characters contained before (.)
 		//
@@ -33,8 +34,7 @@ public class IOInfo {
 	 * @return the File title+extension
 	 */
 	public static String getFileName(final String absolutePath) {
-		return FilenameUtils.getName(absolutePath);
-
+		return getBasename(Path.of(absolutePath));
 	}
 
 	/**
@@ -46,7 +46,47 @@ public class IOInfo {
 	 * @return the File title
 	 */
 	public static String getFileTitle(final String absolutePath) {
-		return FilenameUtils.getBaseName(absolutePath);
+		return getBasename(Path.of(absolutePath));
+	}
+
+
+	/**
+	 * 获取文件的基本名称（不包含扩展名）
+	 * @param path 文件路径
+	 * @return 基本名称，如果文件名为空或隐藏文件（如 .gitignore）则返回原始文件名
+	 */
+	public static String getBasename(Path path) {
+		String fileName = path.getFileName().toString();
+		int dotIndex = fileName.lastIndexOf('.');
+		// 如果没有点号，或者点号在开头（隐藏文件），则整个文件名作为 basename
+		if (dotIndex <= 0) {
+			return fileName;
+		}
+		return fileName.substring(0, dotIndex);
+	}
+
+	/**
+	 * 获取文件的扩展名（包含点号，如 ".txt"）
+	 * @param path 文件路径
+	 * @return 扩展名，如果没有扩展名则返回空字符串
+	 */
+	public static String getExtension(Path path) {
+		String fileName = path.getFileName().toString();
+		int dotIndex = fileName.lastIndexOf('.');
+		if (dotIndex <= 0 || dotIndex == fileName.length() - 1) {
+			return "";
+		}
+		return fileName.substring(dotIndex);
+	}
+
+	/**
+	 * 获取文件的扩展名（不包含点号）
+	 * @param path 文件路径
+	 * @return 扩展名（不带点），如果没有扩展名则返回空字符串
+	 */
+	public static String getExtensionWithoutDot(Path path) {
+		String ext = getExtension(path);
+		return ext.isEmpty() ? "" : ext.substring(1);
 	}
 
 }

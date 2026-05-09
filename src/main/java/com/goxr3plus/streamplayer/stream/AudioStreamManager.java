@@ -1,15 +1,11 @@
 package com.goxr3plus.streamplayer.stream;
 
-import com.goxr3plus.streamplayer.enums.Status;
-import com.goxr3plus.streamplayer.stream.StreamPlayerException.PlayerException;
 import org.tritonus.share.sampled.TAudioFormat;
 import org.tritonus.share.sampled.file.TAudioFileFormat;
-
 import javax.sound.sampled.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**

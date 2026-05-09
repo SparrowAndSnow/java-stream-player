@@ -2,8 +2,6 @@ package com.goxr3plus.streamplayer.stream;
 
 import com.goxr3plus.streamplayer.enums.Status;
 import javazoom.spi.PropertiesContainer;
-
-import javax.sound.sampled.AudioSystem;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
