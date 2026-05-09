@@ -77,15 +77,10 @@ public final class StreamDataSource implements DataSource {
         if (properties != null) {
             String[] bitrateKeys = {"bitrate", "audio.bitrate", "mp3.bitrate", "mp3.bitrate.nsb", "mp3.bitrate.nsynch"};
             for (String key : bitrateKeys) {
-                Object bitrateObj = properties.get(key);
-                if (bitrateObj instanceof Number) {
-                    long bitrateValue = ((Number) bitrateObj).longValue();
-                    if (bitrateValue > 0) {
-                        if (bitrateValue < 10000) {
-                            return bitrateValue * 1000;
-                        }
-                        return bitrateValue;
-                    }
+                Object value = properties.get(key);
+                if (value instanceof Number number) {
+                    long bps = number.longValue();
+                    if (bps > 0) return bps < 10000 ? bps * 1000 : bps;
                 }
             }
         }

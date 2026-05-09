@@ -51,68 +51,68 @@ public class PlaybackEngine implements Callable<Void> {
 
         // Lock stream while playing (prevents concurrent seek operations)
         synchronized (audioLock) {
-        while ((nBytesRead != -1) && stateManager.getStatus() != Status.STOPPED
-                && stateManager.getStatus() != Status.NOT_SPECIFIED
-                && stateManager.getStatus() != Status.SEEKING) {
+            while ((nBytesRead != -1) && stateManager.getStatus() != Status.STOPPED
+                    && stateManager.getStatus() != Status.NOT_SPECIFIED
+                    && stateManager.getStatus() != Status.SEEKING) {
 
-            try {
-                if (stateManager.getStatus() == Status.PLAYING) {
+                try {
+                    if (stateManager.getStatus() == Status.PLAYING) {
 
-                    int toRead = audioDataLength;
-                    int totalRead = 0;
+                        int toRead = audioDataLength;
+                        int totalRead = 0;
 
-                    for (; toRead > 0 && (nBytesRead = streamManager.getAudioInputStream()
-                            .read(audioDataBuffer.array(), totalRead, toRead)) != -1;
-                         toRead -= nBytesRead, totalRead += nBytesRead) {
+                        for (; toRead > 0 && (nBytesRead = streamManager.getAudioInputStream()
+                                .read(audioDataBuffer.array(), totalRead, toRead)) != -1;
+                             toRead -= nBytesRead, totalRead += nBytesRead) {
 
-                        if (outlet.getSourceDataLine().available() >= outlet.getSourceDataLine().getBufferSize())
-                            logger.info(() -> "Underrun> Available=" + outlet.getSourceDataLine().available()
-                                    + " , SourceDataLineBuffer=" + outlet.getSourceDataLine().getBufferSize());
-                    }
-
-                    if (totalRead > 0) {
-                        var buffer = audioDataBuffer.array();
-                        if (totalRead < buffer.length) {
-                            buffer = new byte[totalRead];
-                            System.arraycopy(audioDataBuffer.array(), 0, buffer, 0, totalRead);
+                            if (outlet.getSourceDataLine().available() >= outlet.getSourceDataLine().getBufferSize())
+                                logger.info(() -> "Underrun> Available=" + outlet.getSourceDataLine().available()
+                                        + " , SourceDataLineBuffer=" + outlet.getSourceDataLine().getBufferSize());
                         }
 
-                        outlet.getSourceDataLine().write(buffer, 0, totalRead);
-
-                        // Encoded stream position
-                        int nEncodedBytes = -1;
-                        var eais = streamManager.getEncodedAudioInputStream();
-                        if (eais != null) {
-                            try {
-                                nEncodedBytes = streamManager.getEncodedAudioLength() - eais.available();
-                                nEncodedBytes = (int) (seekService.getSeekOffset() + nEncodedBytes);
-                            } catch (IOException ignored) {
+                        if (totalRead > 0) {
+                            var buffer = audioDataBuffer.array();
+                            if (totalRead < buffer.length) {
+                                buffer = new byte[totalRead];
+                                System.arraycopy(audioDataBuffer.array(), 0, buffer, 0, totalRead);
                             }
+
+                            outlet.getSourceDataLine().write(buffer, 0, totalRead);
+
+                            // Encoded stream position
+                            int nEncodedBytes = -1;
+                            var eais = streamManager.getEncodedAudioInputStream();
+                            if (eais != null) {
+                                try {
+                                    nEncodedBytes = streamManager.getEncodedAudioLength() - eais.available();
+                                    nEncodedBytes = (int) (seekService.getSeekOffset() + nEncodedBytes);
+                                } catch (IOException ignored) {
+                                }
+                            }
+
+                            long positionInMilliseconds = seekService.getBaseMillisecondPosition()
+                                    + outlet.getSourceDataLine().getMicrosecondPosition() / 1000;
+
+                            final var properties = streamManager.getAudioInputStream() instanceof PropertiesContainer pc
+                                    ? pc.properties()
+                                    : eventDispatcher.getEmptyMap();
+
+                            eventDispatcher.fireProgress(nEncodedBytes, positionInMilliseconds, buffer, properties);
                         }
 
-                        long positionInMilliseconds = seekService.getBaseMillisecondPosition()
-                                + outlet.getSourceDataLine().getMicrosecondPosition() / 1000;
+                    } else if (stateManager.getStatus() == Status.PAUSED) {
+                        outlet.flushAndStop();
+                        waitWhilePaused();
 
-                        final var properties = streamManager.getAudioInputStream() instanceof PropertiesContainer pc
-                                ? pc.properties()
-                                : eventDispatcher.getEmptyMap();
-
-                        eventDispatcher.fireProgress(nEncodedBytes, positionInMilliseconds, buffer, properties);
+                        if (stateManager.getStatus() == Status.PLAYING && outlet.isStartable()) {
+                            outlet.start();
+                        }
                     }
-
-                } else if (stateManager.getStatus() == Status.PAUSED) {
-                    outlet.flushAndStop();
-                    waitWhilePaused();
-
-                    if (stateManager.getStatus() == Status.PLAYING && outlet.isStartable()) {
-                        outlet.start();
-                    }
+                } catch (final IOException ex) {
+                    logger.log(Level.WARNING, "\"Decoder Exception: \" ", ex);
+                    stateManager.setStatus(Status.STOPPED);
                 }
-            } catch (final IOException ex) {
-                logger.log(Level.WARNING, "\"Decoder Exception: \" ", ex);
-                stateManager.setStatus(Status.STOPPED);
             }
-        }
         } // synchronized (audioLock)
 
         // Free audio resources.
@@ -140,7 +140,9 @@ public class PlaybackEngine implements Callable<Void> {
         }
     }
 
-    /** Notify the pause lock so the engine resumes. */
+    /**
+     * Notify the pause lock so the engine resumes.
+     */
     public void notifyPauseResume() {
         synchronized (pauseLock) {
             pauseLock.notifyAll();

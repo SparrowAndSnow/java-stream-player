@@ -38,7 +38,7 @@ public final class UriDataSource implements DataSource, SeekableDataSource {
         this.pendingSeekPosition = bytes;
     }
 
-@Override
+    @Override
     public AudioFileFormat getAudioFileFormat() throws UnsupportedAudioFileException, IOException {
         if (cachedAudioFileFormat != null) {
             return cachedAudioFileFormat;
@@ -57,16 +57,34 @@ public final class UriDataSource implements DataSource, SeekableDataSource {
 
     @Override
     public AudioInputStream openAtPosition(long bytePosition) throws IOException, UnsupportedAudioFileException {
-        URL url = source.toURL();
-        URLConnection conn = url.openConnection();
-        conn.setRequestProperty("Range", "bytes=" + bytePosition + "-");
-        conn.connect();
-        InputStream in = new BufferedInputStream(conn.getInputStream());
-        return AudioSystem.getAudioInputStream(in);
+        if (source.getScheme() != null && source.getScheme().startsWith("file")) {
+            // file:// URI: skip bytes in FileInputStream, then let SPI detect format
+            // from the current position (scans for next frame sync).
+            File file = new File(source);
+            var fis = new java.io.FileInputStream(file);
+            long skipped = fis.skip(bytePosition);
+            if (skipped < bytePosition) {
+                fis.close();
+                throw new IOException("Failed to skip " + bytePosition + " bytes in " + file);
+            }
+            return AudioSystem.getAudioInputStream(new BufferedInputStream(fis));
+        } else {
+            // http(s):// URI: use HTTP Range header
+            URL url = source.toURL();
+            URLConnection conn = url.openConnection();
+            conn.setRequestProperty("Range", "bytes=" + bytePosition + "-");
+            conn.connect();
+            InputStream in = new BufferedInputStream(conn.getInputStream());
+            return AudioSystem.getAudioInputStream(in);
+        }
     }
 
     @Override
     public long getContentLength() {
+        if (source.getScheme() != null && source.getScheme().startsWith("file")) {
+            File f = new File(source);
+            return f.exists() ? f.length() : -1;
+        }
         return contentLength;
     }
 
@@ -414,7 +432,7 @@ public final class UriDataSource implements DataSource, SeekableDataSource {
 
     @Override
     public String toString() {
-        return "UrlDataSource with " + source.toString();
+        return "UriDataSource with " + source.toString();
     }
 
     @Override

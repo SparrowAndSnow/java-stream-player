@@ -9,7 +9,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.BufferedInputStream;
 import java.time.Duration;
 
 public final class FileDataSource implements DataSource, SeekableDataSource {
@@ -22,20 +22,13 @@ public final class FileDataSource implements DataSource, SeekableDataSource {
 
     @Override
     public AudioInputStream openAtPosition(long bytePosition) throws IOException, UnsupportedAudioFileException {
-        var raf = new RandomAccessFile(source, "r");
-        raf.seek(bytePosition);
-        // Wrap the RandomAccessFile as an InputStream for AudioSystem
-        var stream = new java.io.InputStream() {
-            @Override
-            public int read() throws IOException { return raf.read(); }
-            @Override
-            public int read(byte[] b, int off, int len) throws IOException { return raf.read(b, off, len); }
-            @Override
-            public long skip(long n) throws IOException { return Math.max(0, raf.getFilePointer() + n <= source.length() ? n : source.length() - raf.getFilePointer()); }
-            @Override
-            public void close() throws IOException { raf.close(); }
-        };
-        return AudioSystem.getAudioInputStream(stream);
+        var fis = new java.io.FileInputStream(source);
+        long skipped = fis.skip(bytePosition);
+        if (skipped < bytePosition) {
+            fis.close();
+            throw new IOException("Failed to skip " + bytePosition + " bytes in " + source);
+        }
+        return AudioSystem.getAudioInputStream(new BufferedInputStream(fis));
     }
 
     @Override
